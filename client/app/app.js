@@ -6,8 +6,9 @@ import LeftSideBar from './components/leftsidebar';
 import RightSideBar from './components/rightsidebar';
 import ChatPopup from './components/chatpopup';
 import FeedItem from './components/feeditem';
-import {hideElement} from './util';
-import {searchForFeedItems, deleteFeedItem} from './server';
+import ErrorBanner from './components/errorbanner';
+import { hideElement } from './util';
+import { searchForFeedItems, deleteFeedItem } from './server';
 import { IndexRoute, Router, Route, hashHistory } from 'react-router'
 
 /**
@@ -16,8 +17,11 @@ import { IndexRoute, Router, Route, hashHistory } from 'react-router'
 class ProfilePage extends React.Component {
   render() {
     return (
-      <p>This is the profile page for a user with ID {this.props.params.id}.</p>
-    );
+      <p>
+        This is the profile page for a user with ID
+        { this.props.params.id }.
+      </p>
+      );
   }
 }
 
@@ -26,7 +30,7 @@ class ProfilePage extends React.Component {
  */
 class FeedPage extends React.Component {
   render() {
-    return <Feed user={4} />;
+    return <Feed user={ 4 } />;
   }
 }
 
@@ -47,14 +51,16 @@ class SearchResultsPage extends React.Component {
     }
     return searchTerm;
   }
-  
+
   render() {
     var searchTerm = this.getSearchTerm();
     // By using the searchTerm as the key, React will create a new
     // SearchResults component every time the search term changes.
     return (
-      <SearchResults key={searchTerm} searchTerm={searchTerm} />
-    );
+      <SearchResults
+                     key={ searchTerm }
+                     searchTerm={ searchTerm } />
+      );
   }
 }
 
@@ -67,13 +73,13 @@ class SearchResults extends React.Component {
       results: []
     };
   }
-  
+
   deleteFeedItem(id) {
     deleteFeedItem(id, () => {
       this.refresh();
     });
   }
-  
+
   refresh() {
     var searchTerm = this.props.searchTerm;
     if (searchTerm !== "") {
@@ -90,29 +96,37 @@ class SearchResults extends React.Component {
       });
     }
   }
-  
+
   componentDidMount() {
     this.refresh();
   }
-  
+
   render() {
     return (
       <div>
-        <h2>Search Results for {this.props.searchTerm}</h2>
-        <div className={hideElement(this.state.loaded || this.state.invalidSearch)}>Search results are loading...</div>
-        <div className={hideElement(!this.state.invalidSearch)}>Invalid search query.</div>
-        <div className={hideElement(!this.state.loaded)}>
-          <div>Found {this.state.results.length} results.</div>
-          {
-            this.state.results.map((feedItem) => {
+        <h2>Search Results for { this.props.searchTerm }</h2>
+        <div className={ hideElement(this.state.loaded || this.state.invalidSearch) }>
+          Search results are loading...
+        </div>
+        <div className={ hideElement(!this.state.invalidSearch) }>
+          Invalid search query.
+        </div>
+        <div className={ hideElement(!this.state.loaded) }>
+          <div>
+            Found
+            { this.state.results.length } results.
+          </div>
+          { this.state.results.map((feedItem) => {
               return (
-                <FeedItem key={feedItem._id} data={feedItem} onDelete={() => this.deleteFeedItem(feedItem._id)} />
+                <FeedItem
+                          key={ feedItem._id }
+                          data={ feedItem }
+                          onDelete={ () => this.deleteFeedItem(feedItem._id) } />
               )
-            })
-          }
+            }) }
         </div>
       </div>
-    );
+      );
   }
 }
 
@@ -135,14 +149,19 @@ class App extends React.Component {
     }
     return (
       <div>
-        <NavBar searchTerm={searchTerm} />
+        <NavBar searchTerm={ searchTerm } />
         <div className="container">
+          <div className="row">
+            <div className="col-md-12">
+              <ErrorBanner />
+            </div>
+          </div>
           <div className="row">
             <div className="col-md-2 fb-left-sidebar">
               <LeftSideBar />
             </div>
             <div className="col-md-7">
-              {this.props.children}
+              { this.props.children }
             </div>
             <div className="col-md-3 fb-right-sidebar">
               <RightSideBar />
@@ -156,12 +175,18 @@ class App extends React.Component {
 }
 
 ReactDOM.render((
-  <Router history={hashHistory}>
-    <Route path="/" component={App}>
-      {/* Show the Feed at / */}
-      <IndexRoute component={FeedPage} />
-      <Route path="profile/:id" component={ProfilePage} />
-      <Route path="search" component={SearchResultsPage} />
+  <Router history={ hashHistory }>
+    <Route
+           path="/"
+           component={ App }>
+      { /* Show the Feed at / */ }
+      <IndexRoute component={ FeedPage } />
+      <Route
+             path="profile/:id"
+             component={ ProfilePage } />
+      <Route
+             path="search"
+             component={ SearchResultsPage } />
     </Route>
   </Router>
-),document.getElementById('main_container'));
+  ), document.getElementById('main_container'));
