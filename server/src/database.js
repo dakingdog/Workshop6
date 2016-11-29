@@ -1,4 +1,5 @@
-// Data goes here.
+// Data goes here. 
+//acknowledged reading the whole pasting over initialData objects from clientside mock database to serverside mock database
 var initialData = {
   // The "user" collection. Contains all of the users in our Facebook system.
   "users": {
