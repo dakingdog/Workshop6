@@ -2,6 +2,7 @@ var express = require('express');
 var app = express();
 var validate = require('express-jsonschema').validate;
 var StatusUpdateSchema = require('./schemas/statusupdate.json');
+var CommentEntrySchema = require('./schemas/commententry.json')
 var bodyParser = require('body-parser');
 app.use(express.static('../client/build'));
 var docFunctions = require('./database');
@@ -30,6 +31,41 @@ function getUserIdFromToken(authorizationLine) {
   // console.log(e);
   }
 }
+function postComment(feedItemId, author, contents) {
+  var feedItem = readDocument('feedItems', feedItemId);
+  feedItem.comments.push({
+    "author": author,
+    "contents": contents,
+    "postDate": new Date().getTime(),
+    "likeCounter": []
+  });
+  writeDocument('feedItems', feedItem);
+  getFeedItemSync(feedItemId);
+  // var newComment={"author": author,
+  //   "contents": contents,
+  //   "postDate": new Date().getTime(),
+  //   "likeCounter": []};
+  return feedItem;
+// Return a resolved version of the feed item.
+// emulateServerReturn(getFeedItemSync(feedItemId), cb);
+}
+app.post('/feeditem/:feeditemid/CommentThread', validate({
+  body: CommentEntrySchema
+}), function(req, res) {
+  var body = req.body;
+  var fromUser = getUserIdFromToken(req.get('Authorization'));
+  if (fromUser === body.author) {
+    var newComm = postComment(req.params.feeditemid, body.author, body.contents);
+    res.status(201);
+
+    writeDocument('feedItems', newComm);
+    res.send(getFeedItemSync(req.params.feeditemid));
+
+  } else {
+    res.status(401).end();
+  }
+}
+)
 function postStatusUpdate(user, location, contents) {
   // If we were implementing this for real on an actual server, we would check
   // that the user ID is correct & matches the authenticated user. But since
@@ -254,6 +290,67 @@ app.post('/search', function(req, res) {
     res.status(400).end();
   }
 });
+app.put('/feeditem/:feeditemid/CommentThread/:commentIdx/likelist/:userid', function(req, res) {
+  var fromUser = getUserIdFromToken(req.get('Authorization'));
+  var feedItemId = parseInt(req.params.feeditemid, 10);
+  var userId = parseInt(req.params.userid, 10);
+  var index = parseInt(req.params.commentIdx, 10);
+  if (fromUser === userId) {
+    var feedItem = readDocument('feedItems', feedItemId);
+    var comment = feedItem.comments[index];
+    comment.likeCounter.push(userId);
+    writeDocument('feedItems', feedItem);
+    // Return a resolved version of the likeCounter
+    comment.author=readDocument('users', comment.author);
+    res.send(comment);
+  } else {
+    // 401: Unauthorized.
+    res.status(401).end();
+  }
+
+})
+app.delete('/feeditem/:feeditemid/CommentThread/:commentIdx/likelist/:userid', function(req, res) {
+  var fromUser = getUserIdFromToken(req.get('Authorization'));
+  var feedItemId = parseInt(req.params.feeditemid, 10);
+  var userId = parseInt(req.params.userid, 10);
+  var index = parseInt(req.params.commentIdx, 10);
+  if (fromUser === userId) {
+    var feedItem = readDocument('feedItems', feedItemId);
+    var comment = feedItem.comments[index];
+    var userIndex = comment.likeCounter.indexOf(userId);
+    if (userIndex !== 1) {
+      comment.likeCounter.splice(userIndex, 1);
+      writeDocument('feedItems', feedItem);
+    }
+    // writeDocument('feedItems', feedItem);
+    // Return a resolved version of the likeCounter
+    comment.author=readDocument('users', comment.author);
+    res.send(comment);
+  } else {
+    // 401: Unauthorized.
+    res.status(401).end();
+  }
+
+})
+// function unlikeComment(feedItemId, commentIdx, userId, cb) {
+//   var feedItem = readDocument('feedItems', feedItemId);
+//   var comment = feedItem.comments[commentIdx];
+//   var userIndex = comment.likeCounter.indexOf(userId);
+//   if (userIndex !== -1) {
+//     comment.likeCounter.splice(userIndex, 1);
+//     writeDocument('feedItems', feedItem);
+//   }
+//   comment.author = readDocument('users', comment.author);
+//   emulateServerReturn(comment, cb);
+// }
+// function likeComment(feedItemId, commentIdx, userId, cb) {
+//   var feedItem = readDocument('feedItems', feedItemId);
+//   var comment = feedItem.comments[commentIdx];
+//   comment.likeCounter.push(userId);
+//   writeDocument('feedItems', feedItem);
+//   comment.author = readDocument('users', comment.author);
+//   emulateServerReturn(comment, cb);
+// }
 app.use(function(err, req, res, next) {
   if (err.name === 'JsonSchemaValidation') {
     // Set a bad request http response status
